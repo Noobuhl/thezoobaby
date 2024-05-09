@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Xml.Serialization;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -11,23 +12,46 @@ public class enemyAIPatrol : MonoBehaviour
 
     [SerializeField] LayerMask groundLayer, playerLayer;
 
+    BoxCollider boxCollider;
+
     //patrol
     Vector3 destPoint;
     bool walkpointSet;
     [SerializeField] float range;
+
+    //State Change
+    [SerializeField] float sightRange, attackRange;
+    bool playerInSight, playerInAttackRange;
+
     // Start is called before the first frame update
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
         player = GameObject.Find("Player");
+
+        boxCollider = GetComponentInChildren<BoxCollider>();
     }
 
     // Update is called once per frame
     void Update()
     {
-        Patrol();
+        playerInSight = Physics.CheckSphere(transform.position, sightRange, playerLayer);
+        playerInAttackRange = Physics.CheckSphere(transform.position, attackRange, playerLayer);
+
+        if (!playerInSight && !playerInAttackRange) Patrol();
+        if (playerInSight && !playerInAttackRange) Chase();
+        if (playerInSight && playerInAttackRange) Attack();
     }
 
+    void Chase()
+    {
+        agent.SetDestination(player.transform.position);
+    }
+
+    void Attack()
+    {
+
+    }
     void Patrol()
     {
         if (!walkpointSet) SearchForDest();
@@ -44,6 +68,26 @@ public class enemyAIPatrol : MonoBehaviour
         if (Physics.Raycast(destPoint, Vector3.down, groundLayer))
         {
             walkpointSet = true;
+        }
+    }
+
+    void EnableAttack()
+    {
+        boxCollider.enabled = true;
+    }
+
+    void DisabledAttack()
+    {
+        boxCollider.enabled = false;
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        var player = other.GetComponent<PlayerMovementScript>();
+
+        if (player != null)
+        {
+            print("HIT!");
         }
     }
 }
